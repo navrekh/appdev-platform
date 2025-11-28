@@ -1,0 +1,24 @@
+{
+  "name": "appdev-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "api",
+    "ai-services/*",
+    "shared/*"
+  ],
+  "scripts": {
+    "dev": "node --watch api/src/index.js",
+    "prisma:generate": "cd shared/database && npx prisma generate",
+    "prisma:migrate": "cd shared/database && npx prisma migrate dev",
+    "prisma:studio": "cd shared/database && npx prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.20.0",
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "prisma": "^5.20.0"
+  }
+}
