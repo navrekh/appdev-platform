@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppDev - AI-Powered App Development Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [prompt, setPrompt] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+            const [token, setToken] = useState(localStorage.getItem('token'));
+            const [showAuth, setShowAuth] = useState(false);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [name, setName] = useState('');
+            const [isLogin, setIsLogin] = useState(true);
+
+            const API_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3000'
+                : 'https://api.appdev.co.in';
+
+            const handleAuth = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+
+                try {
+                    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+                    const body = isLogin 
+                        ? { email, password }
+                        : { email, password, name };
+
+                    const response = await fetch(`${API_URL}${endpoint}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        localStorage.setItem('token', data.token);
+                        setToken(data.token);
+                        setShowAuth(false);
+                        setEmail('');
+                        setPassword('');
+                        setName('');
+                    } else {
+                        alert(data.error || 'Authentication failed');
+                    }
+                } catch (error) {
+                    alert('Connection error. Please try again.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                
+                if (!token) {
+                    setShowAuth(true);
+                    return;
+                }
+
+                setLoading(true);
+                setResult(null);
+
+                try {
+                    const response = await fetch(`${API_URL}/api/prompts`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ text: prompt })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        setResult(data);
+                        setPrompt('');
+                    } else {
+                        if (response.status === 401) {
+                            localStorage.removeItem('token');
+                            setToken(null);
+                            setShowAuth(true);
+                        }
+                        alert(data.error || 'Failed to submit prompt');
+                    }
+                } catch (error) {
+                    alert('Connection error. Please try again.');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const logout = () => {
+                localStorage.removeItem('token');
+                setToken(null);
+                setResult(null);
+            };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+                    {/* Header */}
+                    <header className="bg-white shadow-sm">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+                                    <span className="text-white font-bold text-xl">A</span>
+                                </div>
+                                <h1 className="text-2xl font-bold text-gray-900">AppDev</h1>
+                            </div>
+                            {token && (
+                                <button
+                                    onClick={logout}
+                                    className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+                                >
+                                    Logout
+                                </button>
+                            )}
+                        </div>
+                    </header>
+
+                    {/* Hero Section */}
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                        <div className="text-center mb-12">
+                            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
+                                Build Apps with
+                                <span className="text-indigo-600"> AI</span>
+                            </h2>
+                            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                                Describe your app idea in plain English. Our AI will generate, 
+                                build, and deploy it automatically.
+                            </p>
+                        </div>
+
+                        {/* Auth Modal */}
+                        {showAuth && !token && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                                <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8">
+                                    <h3 className="text-2xl font-bold mb-6 text-center">
+                                        {isLogin ? 'Login' : 'Sign Up'}
+                                    </h3>
+                                    <form onSubmit={handleAuth} className="space-y-4">
+                                        {!isLogin && (
+                                            <input
+                                                type="text"
+                                                placeholder="Your Name"
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                                required
+                                            />
+                                        )}
+                                        <input
+                                            type="email"
+                                            placeholder="Email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                            required
+                                        />
+                                        <input
+                                            type="password"
+                                            placeholder="Password"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                            required
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={loading}
+                                            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:opacity-50"
+                                        >
+                                            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Sign Up')}
+                                        </button>
+                                    </form>
+                                    <div className="mt-4 text-center">
+                                        <button
+                                            onClick={() => setIsLogin(!isLogin)}
+                                            className="text-indigo-600 hover:text-indigo-700 text-sm"
+                                        >
+                                            {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Login'}
+                                        </button>
+                                        <button
+                                            onClick={() => setShowAuth(false)}
+                                            className="block w-full mt-2 text-gray-500 hover:text-gray-700 text-sm"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Prompt Input */}
+                        <div className="max-w-3xl mx-auto">
+                            <form onSubmit={handleSubmit} className="mb-8">
+                                <div className="bg-white rounded-lg shadow-lg p-6">
+                                    <textarea
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        placeholder="Describe your app... (e.g., 'Build me a todo app with user authentication and real-time sync')"
+                                        className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                                        required
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={loading || !prompt.trim()}
+                                        className="mt-4 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? '🚀 Creating your app...' : '✨ Generate App'}
+                                    </button>
+                                </div>
+                            </form>
+
+                            {/* Result */}
+                            {result && (
+                                <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+                                    <h3 className="text-xl font-bold text-green-600 mb-4">✅ App Created!</h3>
+                                    <div className="space-y-2 text-gray-700">
+                                        <p><strong>App ID:</strong> {result.app.id}</p>
+                                        <p><strong>Name:</strong> {result.app.name}</p>
+                                        <p><strong>Status:</strong> <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{result.app.status}</span></p>
+                                        <p className="text-sm text-gray-500 mt-4">
+                                            Your app is now being processed. Check back soon for build status!
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Features */}
+                        <div className="mt-20 grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-3xl">🤖</span>
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">AI-Powered</h3>
+                                <p className="text-gray-600">Advanced AI understands your requirements and generates complete apps</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-3xl">⚡</span>
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">Lightning Fast</h3>
+                                <p className="text-gray-600">From idea to working app in minutes, not months</p>
+                            </div>
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-3xl">📱</span>
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">Cross-Platform</h3>
+                                <p className="text-gray-600">Build for Android, iOS, and web simultaneously</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <footer className="bg-white border-t mt-20">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-gray-600">
+                            <p>© 2025 AppDev Platform. Powered by AI.</p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
