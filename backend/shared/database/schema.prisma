@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  name          String?
+  passwordHash  String?
+  organizationId String?
+  
+  apps          App[]
+  prompts       Prompt[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("users")
+}
+
+model App {
+  id            String      @id @default(uuid())
+  name          String
+  description   String?
+  
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  
+  promptId      String      @unique
+  prompt        Prompt      @relation(fields: [promptId], references: [id])
+  
+  builds        Build[]
+  status        AppStatus   @default(PLANNING)
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  @@map("apps")
+}
+
+model Prompt {
+  id            String   @id @default(uuid())
+  text          String   @db.Text
+  
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  app           App?
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("prompts")
+}
+
+model Build {
+  id            String      @id @default(uuid())
+  
+  appId         String
+  app           App         @relation(fields: [appId], references: [id])
+  
+  platform      Platform
+  status        BuildStatus @default(QUEUED)
+  
+  apkUrl        String?
+  aabUrl        String?
+  ipaUrl        String?
+  
+  errorMessage  String?     @db.Text
+  
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime    @default(now())
+  
+  @@map("builds")
+}
+
+enum AppStatus {
+  PLANNING
+  GENERATING
+  BUILDING
+  READY
+  FAILED
+}
+
+enum Platform {
+  ANDROID
+  IOS
+  BOTH
+}
+
+enum BuildStatus {
+  QUEUED
+  IN_PROGRESS
+  SUCCESS
+  FAILED
+}
